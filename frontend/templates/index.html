@@ -1,0 +1,15 @@
+<!doctype html>
+<title>Events</title>
+{% block body %}
+  <ul class=events>
+  {% for event in events %}
+    <li>{{ event.name }}</li>
+    <ul>
+      <li>{{ event.type }}</li>
+      <li>{{ event.date }}</li>
+      <li><a href="{{ base_url }}{{ event.link }}">Link to Final Standings</a></li>
+      <li>{{ event.results }}</li>
+    </ul>
+  {% endfor %}
+  </ul>
+{% endblock %}
