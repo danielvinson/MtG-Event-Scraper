@@ -4,6 +4,8 @@ import rethinkdb as r
 from rethinkdb.errors import RqlRuntimeError, RqlDriverError
 from flask import Flask, g, jsonify, render_template, request, abort
 
+import frontend_utils
+
 RDB_HOST =  os.environ.get('RDB_HOST') or 'localhost'
 RDB_PORT = os.environ.get('RDB_PORT') or 28015
 APP_DB = 'scraper'
@@ -28,9 +30,9 @@ def teardown_request(exception):
 @app.route("/")
 def show_page():
   eventCursor = r.table('events').run(g.rdb_conn)
-  events = []
-  for doc in eventCursor:
-    events.append(doc)
+  events = list(eventCursor)
+  events = filterByName(events,'Ross, Tom')
+  #events = getByName('Ross, Tom')
   return render_template('index.html', events=events, base_url='http://magic.wizards.com')
 
 if __name__ == "__main__":

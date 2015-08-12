@@ -8,7 +8,11 @@
       <li>{{ event.type }}</li>
       <li>{{ event.date }}</li>
       <li><a href="{{ base_url }}{{ event.link }}">Link to Final Standings</a></li>
-      <li>{{ event.results }}</li>
+      <ul>
+      {% for result in event.results %}
+        <li>{{ result }}</li>
+      {% endfor %}
+      </ul>
     </ul>
   {% endfor %}
   </ul>

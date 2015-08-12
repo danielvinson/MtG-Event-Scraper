@@ -40,7 +40,7 @@ RDB_HOST =  os.environ.get('RDB_HOST') or 'localhost'
 RDB_PORT = os.environ.get('RDB_PORT') or 28015
 APP_DB = 'scraper'
 
-def initDB():
+def db_init():
   # Create the Database for the App.
   # Run once.
   connection = r.connect(host=RDB_HOST, port=RDB_PORT)
@@ -56,12 +56,42 @@ def initDB():
   finally:
     connection.close()
 
-def addEventToDB(event):
+def db_addEvent(event):
   try:
     connection = r.connect(host=RDB_HOST, port=RDB_PORT, db=APP_DB)
   except RqlDriverError:
     abort(503, "No database connection could be established.")
   r.table('events').insert(event).run(connection)
+  connection.close()
+  return True
+
+def db_removeEvent(id):
+  try:
+    connection = r.connect(host=RDB_HOST, port=RDB_PORT, db=APP_DB)
+  except RqlDriverError:
+    abort(503, "No database connection could be established.")
+  r.table('events').get(id).delete().run(connection)
+  connection.close()
+  return True
+
+def db_removeEventResults(id):
+  try:
+    connection = r.connect(host=RDB_HOST, port=RDB_PORT, db=APP_DB)
+  except RqlDriverError:
+    abort(503, "No database connection could be established.")
+  r.table('events').get(id).replace(r.row.without('results')).run(connection)
+  connection.close()
+  return True
+
+def db_removeAllEventResults():
+  try:
+    connection = r.connect(host=RDB_HOST, port=RDB_PORT, db=APP_DB)
+  except RqlDriverError:
+    abort(503, "No database connection could be established.")
+  eventCursor = r.table('events').run(connection)
+  events = list(eventCursor)
+  for event in events:
+    db_removeEventResults(event['id'])
   return True
 
 def get_links(soup):
@@ -102,8 +132,6 @@ def parse_table(table):
     for th in table.find_all('th'):
       headers.append(th.getText())
   #######
-  # print headers
-  #######
   for row in rows[1:]:
     parsedRow = []
     for i in range(len(headers)):
@@ -116,7 +144,13 @@ def parse_table(table):
         print e
         continue
     if len(parsedRow) > 0:
-      parsedTable.append(parsedRow)
+      # merge dicts -> this could be a one-liner dict comprehension
+      # I am doing it this way for better maintainability.
+      mergedRow = {}
+      for item in parsedRow:
+        mergedRow.update(item)
+      # add to table
+      parsedTable.append(mergedRow)
   return parsedTable
 
 def getData(url):
@@ -208,9 +242,6 @@ def getEvents(session):
   links = list(linkCursor)
   for document in links[500:]:
     print "--------------------------------------"
-    print "--------------------------------------"
-    print "--------------------------------------"
-    print "--------------------------------------"
     eventLink = document['location']
     # Probably need retry logic here?  Maybe in parseEventPage?
     try:
@@ -234,7 +265,7 @@ def getEvents(session):
               duplicate = True
           if duplicate == False:
             print event
-            addEventToDB(event)
+            db_addEvent(event)
             print "Event added to Database: %s" % event
         except Exception, e:
           print "Error adding to DB, likely parser cannot handle this type of page."
